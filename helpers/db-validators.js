@@ -1,5 +1,10 @@
-const { Categoria, Role, Usuario } = require('../models');
+const { Categoria, Role, Usuario, Producto } = require('../models');
 
+/**
+ * The function `esRoleValido` checks if a given role exists in the database and throws an error if it
+ * doesn't.
+ * @param [rol] - The `rol` parameter is a string that represents a role.
+ */
 const esRoleValido = async (rol = '') => {
   const existeRol = await Role.findOne({ rol });
   if (!existeRol) {
@@ -7,6 +12,10 @@ const esRoleValido = async (rol = '') => {
   }
 };
 
+/**
+ * The function checks if an email already exists in a database and throws an error if it does.
+ * @param [correo] - The parameter "correo" is a string that represents an email address.
+ */
 const emailExiste = async (correo = '') => {
   // Verificar si el correo existe
   const existeEmail = await Usuario.findOne({ correo });
@@ -15,6 +24,11 @@ const emailExiste = async (correo = '') => {
   }
 };
 
+/**
+ * The function checks if a user exists by their ID and throws an error if they don't.
+ * @param id - The parameter `id` is the unique identifier of a user. It is used to search for a user
+ * in the database by their ID.
+ */
 const existeUsuarioPorId = async (id) => {
   // Verificar si el correo existe
   const existeUsuario = await Usuario.findById(id);
@@ -23,8 +37,20 @@ const existeUsuarioPorId = async (id) => {
   }
 };
 
+/**
+ * The function checks if a category exists based on its ID and throws an error if it doesn't.
+ * @param id - The parameter `id` is the identifier of a category. It is used to search for a category
+ * in the database using the `Categoria.findById` method.
+ */
 const existeCategoriaPorId = async (id) => {
   const categoria = await Categoria.findById(id);
+  if (!categoria) {
+    throw new Error(`El id no existe ${id}`);
+  }
+};
+
+const existeProductoPorId = async (id) => {
+  const categoria = await Producto.findById(id);
   if (!categoria) {
     throw new Error(`El id no existe ${id}`);
   }
@@ -35,4 +61,5 @@ module.exports = {
   emailExiste,
   existeUsuarioPorId,
   existeCategoriaPorId,
+  existeProductoPorId,
 };
