@@ -1,7 +1,11 @@
-const { subirArchivo } = require('../helpers');
-const path = require('path');
-const { Usuario, Producto } = require('../models');
 const fs = require('fs');
+const path = require('path');
+
+const cloudinary = require('cloudinary').v2;
+cloudinary.config(process.env.CLOUDINARY_URL);
+
+const { subirArchivo } = require('../helpers');
+const { Usuario, Producto } = require('../models');
 
 /**
  * The function `cargarArchivo` is an asynchronous function that handles file uploads and returns the
@@ -77,11 +81,101 @@ const actualizarImagen = async (req, res) => {
   }
   modelo.img = await subirArchivo(req.files, undefined, coleccion);
   await modelo.save();
+};
 
-  res.json({ id, coleccion });
+const actualizarImagenCloudinary = async (req, res) => {
+  const { id, coleccion } = req.params;
+
+  let modelo;
+
+  switch (coleccion) {
+    case 'usuarios':
+      modelo = await Usuario.findById(id);
+      if (!modelo) {
+        return res
+          .status(400)
+          .json({ msg: `No existe un usuario con el id ${id}` });
+      }
+      break;
+    case 'productos':
+      modelo = await Producto.findById(id);
+      if (!modelo) {
+        return res
+          .status(400)
+          .json({ msg: `No existe un producto con el id ${id}` });
+      }
+      break;
+    default:
+      return res.status(500).json({ msg: 'Hubo un error' });
+  }
+
+  if (modelo.img) {
+    /* The code `const nombreArr = modelo.img.split('/')[-1];` is splitting the `modelo.img` string by the
+ forward slash ('/') and accessing the last element of the resulting array. This is done to extract
+ the filename and extension from the URL. */
+    const nombreArr = modelo.img.split('/')[-1];
+    const id = nombreArr.split('.')[1];
+    await cloudinary.uploader.destroy(id);
+  }
+  const { tempFilePath } = req.files.archivo;
+  const { secure_url } = await cloudinary.uploader.upload(tempFilePath);
+
+  modelo.img = secure_url;
+  await modelo.save();
+
+  res.json(modelo);
+};
+
+const mostrarImagen = async (req, res) => {
+  const { id, coleccion } = req.params;
+
+  let modelo;
+
+  switch (coleccion) {
+    case 'usuarios':
+      modelo = await Usuario.findById(id);
+      if (!modelo) {
+        return res
+          .status(400)
+          .json({ msg: `No existe un usuario con el id ${id}` });
+      }
+      break;
+    case 'productos':
+      modelo = await Producto.findById(id);
+      if (!modelo) {
+        return res
+          .status(400)
+          .json({ msg: `No existe un producto con el id ${id}` });
+      }
+      break;
+    default:
+      return res.status(500).json({ msg: 'Hubo un error' });
+  }
+
+  // Limpiar imagenes
+  if (modelo.img) {
+    const pathImagen = path.join(
+      __dirname,
+      '../uploads',
+      coleccion,
+      modelo.img
+    );
+    /* The code `if (fs.existsSync(pathImagen)) { fs.unlinkSync(pathImagen); }` is checking if the
+    image file exists at the specified path (`pathImagen`). If the file exists, it is deleted using
+    the `fs.unlinkSync()` method. This code is used to remove the previous image file before
+    updating it with a new one. */
+    if (fs.existsSync(pathImagen)) {
+      res.sendFile(pathImagen);
+    }
+  }
+
+  const pathImagen = path.join(__dirname, '../assets/no-image.jpg');
+  res.sendFile(pathImagen);
 };
 
 module.exports = {
   cargarArchivo,
   actualizarImagen,
+  mostrarImagen,
+  actualizarImagenCloudinary,
 };
